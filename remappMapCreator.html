@@ -1,0 +1,329 @@
+<html>
+  <head>
+    <style>
+      p {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .display__popup {
+        position: fixed;
+        background: rgb(0, 0, 0);
+        opacity: 50%;
+        width:100%;
+        height:100%;
+        z-index: 10;
+      }
+    </style>
+  </head>
+<body>
+
+<div style="height: 10vh; background-repeat: no-repeat" id="clickable">
+<button id="addtoggle">
+Add
+</button>
+<input id="editImage" type="text">
+<button id="useImageButton">Use Image</button>
+
+
+</div>
+<div style="color:red">
+<p>
+Id chosen: <span id="editPropertiesId"> </span>
+</p>
+<p>
+Connected nodes: <input type="text" id="editPropertiesConnected">
+</p>
+<p>
+Name: <input type="text" id="editPropertiesName">
+</p>
+<br>
+<br>
+<p>
+Start: <input type="text" id="editStartLocation">
+Destination: <input type="text" id="editDestinationLocation">
+</p>
+<br>
+<p>
+Map Name: <input type="text" id="editMapName">
+</p>
+<button id="drawLinesButton">
+Draw Lines
+</button>
+<button id="SaveMapButton">
+  Save Map Publicly
+</button>
+<button id="SaveMapButtonPrivate">
+  Save Map Privately (save raw pasteable text)
+</button>
+<button id="tutorialOpener" style="color: green">
+  How To Use This Website (Google Doc)
+</button>
+<p id="stringifiedMap"></p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+import { getDatabase, ref, child, get,goOffline, goOnline, set, update } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+// TODO: Add SDKs for Firebase products that you want to use
+
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDbpo3ZIEKThXwGsdy0cdpyBNcwT5VVYCY",
+  authDomain: "remapp-898ca.firebaseapp.com",
+  databaseURL: "https://remapp-898ca-default-rtdb.firebaseio.com",
+  projectId: "remapp-898ca",
+  storageBucket: "remapp-898ca.appspot.com",
+  messagingSenderId: "1018209088208",
+  appId: "1:1018209088208:web:54a3fb5c2d0ea3114ae4d5",
+  measurementId: "G-Y0BL81NVVR"
+};
+// Initialize Firebase
+const firebaseApp = initializeApp(firebaseConfig);  
+
+const div1 = document.getElementById("clickable")
+const box = div1.getBoundingClientRect();
+// randomtestfile2percentage.html
+alert("This app is used to create apps for the ReMapp application on the Google Play Store.")
+set
+let ids = [];
+let addtoggle = false
+let toggledrecent = false
+const addtogglebutton = document.getElementById("addtoggle")
+// edit properties box
+const ePId = document.getElementById("editPropertiesId")
+const ePConnected = document.getElementById("editPropertiesConnected")
+const ePNameEdit = document.getElementById("editPropertiesName")
+//const ePImage = document.getElementById("mainImage")
+const ePImageEdit = document.getElementById("editImage")
+const saveMapButtonElm = document.getElementById("SaveMapButton")
+
+addtogglebutton.addEventListener("click", () => {
+  console.log("addtoggle")
+
+	addtoggle = !addtoggle
+  addtogglebutton.style.color = addtoggle ? "red" : "green"
+  toggledrecent = true
+})
+	
+function openTutorial() {
+  console.log("opening")
+  window.open("https://docs.google.com/document/d/1CGJkGDi3JI_9y8_BOvK9x4RW6mqwP7glNxGcvIBTlhk/edit?usp=sharing", "_blank")
+}
+document.getElementById("tutorialOpener").addEventListener("click", () => {openTutorial()})
+function deleteIconElem() {
+	console.log("Pressed")
+  if (ids.length > 0) {
+  	let idval = ids.pop()
+    console.log(idval)
+    const toremove = document.getElementById(idval.id)
+    toremove.remove();
+}}
+div1.addEventListener("click", (e) => {
+	if (toggledrecent) {toggledrecent = false; return}
+	if (!addtoggle) {return}
+	let x1 = e.clientX;
+  let y1 = e.clientY;
+  const newtext1 = document.createElement("button")
+  newtext1.style.cssText = "position: absolute; left: " + String(x1) + "px; top: " + String(y1) + "px; z-index: 2";
+  let idval = ids.length > 0 ? parseInt(ids[ids.length-1].id) + 1 : 0
+  const textvalue = document.createTextNode(String(idval))
+  console.log(idval)
+  newtext1.setAttribute("id", String(idval))
+  ids.push({
+  	"id": newtext1.id,
+    "connected": "",
+    "name": "",
+    "coordinates": [x1, y1]
+   })
+  console.log(ids)
+  newtext1.append(textvalue)
+  div1.append(newtext1);
+	newtext1.addEventListener("click", (e) => {
+  	toggledrecent = true;
+    ePId.innerText = newtext1.id
+    ePConnected.value = ids[parseInt(newtext1.id)].connected
+    ePNameEdit.value = ids[parseInt(newtext1.id)].name
+  })
+})
+saveMapButtonElm.addEventListener("click", (e) => {
+  let img = new Image();
+  img.src = ePImageEdit.value
+  let postval = JSON.stringify({"items": ids, "name": document.getElementById("editMapName").value, "url": ePImageEdit.value, "imgDimensions": [img.width, img.height] })
+  console.log(JSON.stringify({"items": ids, "name": document.getElementById("editMapName").value, "url": ePImageEdit.value, "imgDimensions": [img.width, img.height] }))
+  //document.getElementById("stringifiedMap").innerText = JSON.stringify({"items": ids, "name": "", "url": ePImageEdit.value, "imgDimensions": [img.width, img.height] })
+  const dbRef = getDatabase(firebaseApp)
+  get(child(ref(dbRef), "latestNum")).then((snapshot) => {
+    if (snapshot.exists()) {
+      console.log(snapshot.val())
+      set(ref(dbRef, snapshot.val()), postval)
+      set(ref(dbRef, "latestNum"), JSON.stringify(parseInt(snapshot.val())+1))
+    } else {
+      alert("Error")
+    }
+    goOffline(dbRef)
+  }).catch((error) => {
+    console.log(error)
+  })
+})
+
+div1.addEventListener("contextmenu", (e) => {
+	if (!addtoggle) {ePId.innerText = ""; return}
+	e.preventDefault();
+  deleteIconElem();
+  
+  }
+)
+
+function getMeta(varA) {
+     let img = new Image();
+     img.src = varA;
+     return `width: ${img.width}px;height: ${img.height}px; background-repeat: no-repeat`
+    
+}
+
+ePConnected.onchange = () => {
+	if (!document.getElementById("editPropertiesId").innerText) {return}
+  ids[parseInt(ePId.innerText)].connected = ePConnected.value
+}
+ePNameEdit.onchange = () => {
+	if (!document.getElementById("editPropertiesId").innerText) {return}
+  ids[parseInt(ePId.innerText)].name = ePNameEdit.value
+
+}
+document.getElementById("useImageButton").addEventListener("click", () => {
+  div1.style.cssText = getMeta(ePImageEdit.value)
+  let img = new Image()
+  img.src = ePImageEdit.value
+  div1.style.width = img.width
+  div1.style.height = img.height
+  div1.style.backgroundImage =  `url(${ePImageEdit.value})`
+  
+  document.getElementById("useImageButton").remove()
+  document.getElementById(ePImage.read)
+})
+// ePImageEdit.onchange = () => {
+// 	div1.style.cssText = getMeta(ePImageEdit.value)
+//   div1.style.backgroundImage =  `url(${ePImageEdit.value})`
+  
+// }
+function getLengthAndRotation(coords1, coords2) {
+	let returnval = [];
+  returnval.push(((coords1[0] - coords2[0]) ** 2 + (coords1[1] - coords2[1]) ** 2) ** 0.5)
+  let angle = Math.atan2((coords2[1] - coords1[1]), (coords2[0] - coords1[0]))
+  console.log(angle)
+  returnval.push(angle)
+  return returnval
+}
+function getOffset( el ) {
+    let rect = el.getBoundingClientRect();
+    return {
+        left: rect.left + window.pageXOffset,
+        top: rect.top + window.pageYOffset,
+        width: rect.width || el.offsetWidth,
+        height: rect.height || el.offsetHeight
+    };
+}
+
+function connect(div1, div2, color, thickness) { // draw a line connecting elements, use drawLine() instead by the way
+    let off1 = getOffset(div1);
+    let off2 = getOffset(div2);
+    // bottom right
+    let x1 = off1.left + off1.width;
+    let y1 = off1.top + off1.height;
+    // top right
+    let x2 = off2.left + off2.width;
+    let y2 = off2.top;
+    // distance
+    let length = Math.sqrt(((x2-x1) * (x2-x1)) + ((y2-y1) * (y2-y1)));
+    // center
+    let cx = ((x1 + x2) / 2) - (length / 2);
+    let cy = ((y1 + y2) / 2) - (thickness / 2);
+    // angle
+    let angle = Math.atan2((y1-y2),(x1-x2))*(180/Math.PI);
+    // make hr
+    let div3 = document.createElement("div")
+    
+    
+    let htmlLine = "padding:0px; margin:0px; height:" + thickness + "px; background-color:" + color + "; line-height:1px; position:absolute; left:" + cx + "px; top:" + cy + "px; width:" + length + "px; -moz-transform:rotate(" + angle + "deg); -webkit-transform:rotate(" + angle + "deg); -o-transform:rotate(" + angle + "deg); -ms-transform:rotate(" + angle + "deg); transform:rotate(" + angle + "deg);";
+    //
+    // alert(htmlLine);
+    div3.style.cssText = htmlLine
+    document.body.appendChild(div3);
+}
+function drawLine(coords1, coords2, thickness, color) {
+  let x1 = coords1[0]; let y1 = coords1[1]; let x2 = coords2[0]; let y2 = coords2[1];
+  let length = Math.sqrt(((x2-x1) * (x2-x1)) + ((y2-y1) * (y2-y1)));
+  let cx = ((x1 + x2) / 2) - (length / 2);
+  let cy = ((y1 + y2) / 2) - (thickness / 2);
+  let angle = Math.atan2((y1-y2),(x1-x2))*(180/Math.PI);
+  let div3 = document.createElement("div")
+  div3.setAttribute("class", "connectors")
+  let htmlLine = "padding:0px; margin:0px; height:" + thickness + "px; background-color:" + color + "; line-height:1px; position:absolute; left:" + cx + "px; top:" + cy + "px; width:" + length + "px; -moz-transform:rotate(" + angle + "deg); -webkit-transform:rotate(" + angle + "deg); -o-transform:rotate(" + angle + "deg); -ms-transform:rotate(" + angle + "deg); transform:rotate(" + angle + "deg);";
+    //
+    // alert(htmlLine);
+    div3.style.cssText = htmlLine
+    document.body.appendChild(div3);
+
+}
+
+function drawConnectingLines(ids, startLocation, endLocation) {
+	// const endLocation = parseInt(document.getElementById("editDestinationLocation").value)
+  // const startLocation = parseInt(document.getElementById("editStartLocation").value)
+  Array.from(document.getElementsByClassName("connectors")).forEach(elm => {elm.remove();})
+  // console.log(ids)
+  // console.log(startLocation)
+  // console.log(endLocation)
+  const visited = new Set();
+  let answ = [];
+  const queue = []
+  queue.push([startLocation, []])
+  console.log("queue")
+  console.log(queue)
+  while (queue.length > 0) {
+
+    const currval = queue.shift();
+    console.log(currval)
+    const connected = ids[currval[0]]["connected"].trim().split(" ").map(elm => (parseInt(elm)))
+    console.log("connected")
+    console.log(connected)
+    if (connected == [""]) {
+      continue;
+    }
+    for (let i = 0; i<connected.length; i++) {
+      let d = connected[i];
+      if (d == endLocation) {
+        console.log("FOUND IT!!")
+        console.log((currval[1].concat(d)))
+        answ = [startLocation].concat(currval[1].concat(d))
+        break;
+      }
+      if (!visited.has(d)) {
+        visited.add(d);
+        queue.push([d, currval[1].concat(d)])
+      }
+    }
+  }
+  answ = [answ]
+  if (answ != []) {
+  	let draw1 = answ[0][0]
+    for (let i = 1; i < answ[0].length; i++) {
+    	connect(document.getElementById(String(draw1)), document.getElementById(String(answ[0][i])), "blue", 3)
+      draw1 = answ[0][i]
+    }
+  }
+  
+}
+document.getElementById("drawLinesButton").addEventListener("click", () => {
+  drawConnectingLines(ids, parseInt(document.getElementById("editStartLocation").value), parseInt(document.getElementById("editDestinationLocation").value))
+}) 
+document.getElementById("SaveMapButtonPrivate").addEventListener("click", () => {
+  let img = new Image()
+  img.src = ePImageEdit.value
+  document.getElementById("stringifiedMap").innerText = "To save this map, please copy and place it somewhere. Your map is: \n" + JSON.stringify({"items": ids, "name": document.getElementById("editMapName").value, "url": ePImageEdit.value, "imgDimensions": [img.width, img.height] })
+})
+</script>
+</body>
+</html>
